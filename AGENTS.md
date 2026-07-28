@@ -10,6 +10,7 @@ This document explains how to integrate Sainsbury's CLI into AI agent frameworks
 - ✅ **Pi Agent** / **Mom** - Slack bot with skills
 - ✅ **Claude Desktop** - MCP server (future)
 - ✅ **Custom agents** - Any framework that can call bash
+- ✅ **Frona** - Skills installed from this repo, or the MCP server — see [`docs/FRONA.md`](./docs/FRONA.md)
 
 ---
 
@@ -66,19 +67,27 @@ skills/
 name: sainsburys-groceries
 description: "Sainsbury's UK grocery automation. Use when the user wants to shop at Sainsbury's, check prices, manage their basket, or place an order."
 license: MIT
-allowed-tools: Bash(npm run groc:*), Bash(npm install:*)
+compatibility: "Node.js 18+, Playwright for login. UK Sainsbury's delivery areas only."
+allowed-tools: Bash(npm:*), Bash(npx:*)
 metadata:
   author: zish
   version: "2.1.0"
-  requires: "Node.js 18+, Playwright for login."
+  tags: "groceries, sainsburys, uk"
 ---
 ```
 
-Only `name`, `description`, `license`, `allowed-tools`, and `metadata` are
-recognised top-level keys — anything else (runtime requirements, tags) belongs
-under `metadata`. `allowed-tools` entries are permission rules, so the command
-prefix inside `Bash(...)` is written exactly as it would be typed:
-`Bash(npm run groc:*)`, not `Bash(npm:run:groc:*)`.
+Three rules worth knowing, because hosts differ on them:
+
+- Recognised top-level keys are `name`, `description`, `license`, `compatibility`,
+  `metadata`, and `allowed-tools`. Anything else is ignored.
+- **`metadata` values must be strings.** A YAML list (`tags: [a, b]`) makes strict
+  parsers reject the whole file — Frona is one of them.
+- **`allowed-tools` splits differently per host:** Claude Code splits on commas, the
+  `agent-skills` crate splits on whitespace. Keep each rule token space-free
+  (`Bash(npm:*)`, not `Bash(npm run groc:*)`) so the value survives either. The
+  colon syntax is a permission prefix, so `Bash(npm:*)`, never `Bash(npm:run:groc:*)`.
+
+See [`docs/FRONA.md`](./docs/FRONA.md) for the Frona specifics.
 
 ### Triggers
 
