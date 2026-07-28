@@ -60,44 +60,45 @@ npm link
 
 ```bash
 # Login to Sainsbury's (saves session to ~/.sainsburys/session.json)
-npm run groc login --email YOUR_EMAIL --password YOUR_PASSWORD
+npm run groc -- login --email YOUR_EMAIL --password YOUR_PASSWORD
 
 # Or if installed globally:
 groc --provider sainsburys login --email YOUR_EMAIL --password YOUR_PASSWORD
 
 # Test it works
-npm run groc search "milk"
+npm run groc -- search "milk"
 ```
 
 ### Basic Usage
 
 ```bash
 # Search for products
-npm run groc search "organic milk"
+npm run groc -- search "organic milk"
 
 # Add to basket
-npm run groc add 357937 --qty 2
+npm run groc -- add 357937 --qty 2
 
 # View basket
-npm run groc basket
+npm run groc -- basket
 
-# Book delivery and checkout
-npm run groc slots
-npm run groc book <slot-id>
-npm run groc checkout
+# Book delivery, then preview and place the order
+npm run groc -- slots
+npm run groc -- book <slot-id>
+npm run groc -- checkout --dry-run   # Preview — always do this first
+npm run groc -- checkout --yes       # Place it, once you've approved the preview
 ```
 
 ### For AI Agents
 
 ```bash
 # Agent calls via bash:
-cd /path/to/uk-grocery-cli && npm run groc search "chicken breast" --json
-cd /path/to/uk-grocery-cli && npm run groc add 357937 --qty 2
-cd /path/to/uk-grocery-cli && npm run groc basket --json
+cd /path/to/uk-grocery-cli && npm run groc -- search "chicken breast" --json
+cd /path/to/uk-grocery-cli && npm run groc -- add 357937 --qty 2
+cd /path/to/uk-grocery-cli && npm run groc -- basket --json
 
 # List favourites / frequently-bought products
-npm run groc favourites
-npm run groc fav-search "milk" --json
+npm run groc -- favourites
+npm run groc -- fav-search "milk" --json
 ```
 
 See [SKILL.md](SKILL.md) for complete agent integration guide, or the per-supermarket skills in [`skills/`](skills/).
@@ -146,7 +147,7 @@ Your agent can call the CLI directly:
 // Agent executes:
 await exec('groc --provider sainsburys search "milk" --json');
 await exec('groc --provider sainsburys add 357937 --qty 2');
-await exec('groc --provider sainsburys checkout');
+await exec('groc --provider sainsburys checkout --dry-run'); // then get the user's OK
 ```
 
 ### Example Agent Workflow
@@ -203,7 +204,7 @@ Add to Claude Desktop config (`claude_desktop_config.json`):
 | `grocery_basket_clear` | Clear basket |
 | `grocery_slots` | List delivery slots |
 | `grocery_book_slot` | Book delivery slot |
-| `grocery_checkout` | Checkout (dry_run default) |
+| `grocery_checkout` | Preview, then place the order — requires user approval |
 | `grocery_orders` | Order history |
 | `grocery_favourites` | Favourites (Sainsbury's, Ocado) |
 | `grocery_favourites_search` | Search within favourites (Sainsbury's, Ocado) |
@@ -218,6 +219,28 @@ Add to Claude Desktop config (`claude_desktop_config.json`):
 All tools accept a `provider` parameter: `sainsburys` (default), `ocado`, or `tesco`.
 
 See [SKILL.md](SKILL.md) for full MCP reference and per-supermarket skill files in [`skills/`](skills/).
+
+### Human approval before ordering
+
+An agent can plan the shop, search, build the basket, and book a slot on its own.
+Placing the order spends real money, so that step is gated on a human saying yes.
+
+Over MCP, `grocery_checkout` is two calls:
+
+1. `dry_run: true` (the default) returns the line items, total, and booked slot,
+   plus a single-use `confirmation_code`.
+2. The agent shows that preview to the user and waits for approval.
+3. `dry_run: false` with the `confirmation_code` places the order.
+
+The code is minted by the dry run and bound to it: it expires after 10 minutes,
+only works for the provider that issued it, is void if the basket changed since
+the preview, and cannot be replayed. So an agent cannot place an order the user
+never saw, and an approval for one basket cannot be spent on another.
+
+The CLI has the same shape — `groc checkout` refuses to run and points you at
+`--dry-run` first, `--yes` to confirm.
+
+Booking a slot is deliberately *not* gated: it is reversible and costs nothing.
 
 ### Lightweight HTTP API
 
@@ -376,9 +399,12 @@ groc clear               Empty basket
 ```bash
 groc slots               View available delivery slots
 groc book <slot-id>      Reserve delivery slot
-groc checkout            Place order
---dry-run                Preview order without placing
+groc checkout --dry-run  Preview the order without placing it
+groc checkout --yes      Place the order (refuses to run without --yes)
 ```
+
+Placing an order always takes two steps: preview it, show the human, then confirm.
+See [Human approval before ordering](#human-approval-before-ordering).
 
 ### Favourites
 
@@ -568,11 +594,13 @@ uk-grocery-cli/
 │   ├── auth/
 │   │   └── login.ts              # Shared Playwright authentication
 │   ├── cli.ts                    # Multi-provider CLI entrypoint
+│   ├── checkout-approval.ts      # Human-approval gate for placing orders
 │   └── mcp-server.ts             # MCP server (all providers)
 ├── skills/
-│   ├── sainsburys.md              # Sainsbury's agent skill
-│   ├── tesco.md                   # Tesco agent skill
-│   └── ocado.md                   # Ocado agent skill
+│   ├── sainsburys-groceries/SKILL.md  # Sainsbury's agent skill
+│   ├── tesco-groceries/SKILL.md       # Tesco agent skill
+│   ├── ocado-groceries/SKILL.md       # Ocado agent skill
+│   └── grocery-api/SKILL.md           # Local HTTP API agent skill
 ├── scripts/
 │   └── tesco-capture-search.ts   # Dev tool: capture Tesco search API responses
 ├── docs/
@@ -634,7 +662,8 @@ Open an issue or PR.
 
 ### v2.1 (Current)
 - ✅ Full MCP server with multi-provider support
-- ✅ Per-supermarket skill files (`skills/`)
+- ✅ Per-supermarket agent skills (`skills/<name>/SKILL.md`)
+- ✅ Human-approval gate in front of real checkout (CLI and MCP)
 - ✅ Cross-store price comparison via MCP
 - ✅ Tesco staples management via MCP
 - ✅ JSON HTTP API for agents without filesystem access

@@ -14,7 +14,8 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ProviderFactory, ProviderName, compareProduct } from './providers/index.js';
-import type { GroceryProvider } from './providers/types.js';
+import type { Basket, GroceryProvider, Order } from './providers/types.js';
+import { issueApproval, redeemApproval } from './checkout-approval.js';
 import * as fs from 'fs';
 import * as os from 'os';
 
@@ -59,6 +60,33 @@ function textResult(text: string, isError = false) {
     content: [{ type: 'text' as const, text }],
     ...(isError ? { isError: true } : {}),
   };
+}
+
+/**
+ * Renders what the user is being asked to approve. A total alone is not enough
+ * for an informed yes, so list the line items and the delivery slot too.
+ */
+function formatOrderPreview(basket: Basket, order: Order): string {
+  const MAX_LINES = 20;
+  const shown = basket.items.slice(0, MAX_LINES).map(item =>
+    `  ${item.quantity} x ${item.name} — £${item.total_price.toFixed(2)}`
+  );
+  if (basket.items.length > MAX_LINES) {
+    shown.push(`  ...and ${basket.items.length - MAX_LINES} more item(s)`);
+  }
+
+  const slot = order.delivery_slot
+    ? `Delivery: ${order.delivery_slot.date} ${order.delivery_slot.start_time}-${order.delivery_slot.end_time}`
+    : 'Delivery: no slot booked yet';
+
+  return [
+    `Items (${basket.items.length}):`,
+    shown.length > 0 ? shown.join('\n') : '  (basket is empty)',
+    '',
+    `Total: £${order.total.toFixed(2)}`,
+    slot,
+    `Status: ${order.status}`,
+  ].join('\n');
 }
 
 // ─── Tool definitions ────────────────────────────────────────────
@@ -255,13 +283,29 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: 'grocery_checkout',
-        description: 'Complete the order and checkout. Use dry_run=true to preview without placing the order.',
+        description:
+          'Place the grocery order. This spends the user\'s money and always takes two steps. ' +
+          'Step 1: call with dry_run=true (the default) to get a preview and a confirmation_code. ' +
+          'Step 2: show that preview to the user and, only after they explicitly approve it, call again with dry_run=false and confirmation_code. ' +
+          'Never decide on your own that approval can be skipped. Codes are single-use, expire after 10 minutes, and are void if the basket changes.',
         inputSchema: {
           type: 'object',
           properties: {
             provider: { ...providerEnum, default: 'sainsburys' },
             dry_run: { type: 'boolean', description: 'Preview without placing order (default: true)', default: true },
+            confirmation_code: {
+              type: 'string',
+              description:
+                'Code from the dry-run preview. Required when dry_run=false. Only send it once the user has approved that exact preview.',
+            },
           },
+        },
+        annotations: {
+          title: 'Checkout (requires human approval)',
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: true,
         },
       },
       {
@@ -572,18 +616,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // ── grocery_checkout ──
     if (name === 'grocery_checkout') {
       if (loginError) return textResult(loginError, true);
-      const { dry_run = true } = args as { dry_run?: boolean };
+      const { dry_run = true, confirmation_code } = args as { dry_run?: boolean; confirmation_code?: string };
       const provider = getProvider(providerName);
-      const order = await provider.checkout(dry_run);
 
+      // Step 1 — preview the order and mint a confirmation code for the user to approve.
       if (dry_run) {
+        const basket = await provider.getBasket();
+        const order = await provider.checkout(true);
+        const approval = issueApproval(providerName, basket, Date.now());
+
         return textResult(
-          `Checkout preview for ${providerName}:\nTotal: £${order.total}\nStatus: ${order.status}\nItems: ${order.items.length}\n\nUse dry_run=false to place the order.`
+          `Checkout preview for ${providerName} — NOT placed yet.\n\n` +
+            `${formatOrderPreview(basket, order)}\n\n` +
+            `Confirmation code: ${approval.code} (valid ${approval.expiresInMinutes} minutes, single use)\n\n` +
+            `Show this preview to the user and ask them to approve it. Once they do, call grocery_checkout again with ` +
+            `dry_run=false and confirmation_code="${approval.code}". Do not place the order without their approval. ` +
+            `Any basket change voids the code — re-run this preview if the basket is edited.`
         );
       }
 
+      // Step 2 — place the order, but only against an approval the user actually gave.
+      const basket = await provider.getBasket();
+      const redeemed = redeemApproval(confirmation_code, providerName, basket, Date.now());
+      if (!redeemed.ok) {
+        return textResult(`Order NOT placed at ${providerName}: ${redeemed.reason}`, true);
+      }
+
+      const order = await provider.checkout(false);
       return textResult(
-        `Order placed at ${providerName}!\nOrder ID: ${order.order_id}\nTotal: £${order.total}\nStatus: ${order.status}`
+        `Order placed at ${providerName}!\nOrder ID: ${order.order_id}\nTotal: £${order.total.toFixed(2)}\nStatus: ${order.status}`
       );
     }
 
