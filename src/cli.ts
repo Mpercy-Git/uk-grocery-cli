@@ -464,21 +464,31 @@ program
   .command('checkout')
   .description('Complete order and checkout')
   .option('--dry-run', 'Preview without placing order')
+  .option('--yes', 'Confirm placing a real order (required without --dry-run)')
   .action(async (options, cmd) => {
     try {
       const provider = getProvider(cmd.optsWithGlobals());
-      
+
+      // Placing an order spends real money, so it needs an explicit human yes.
+      // Agents driving the CLI must surface the --dry-run preview first.
+      if (!options.dryRun && !options.yes) {
+        console.log('⚠️  This places a real order.');
+        console.log('   Preview it first:  npm run groc -- checkout --dry-run');
+        console.log('   Then confirm with: npm run groc -- checkout --yes');
+        process.exit(0);
+      }
+
       if (options.dryRun) {
         console.log(`🔍 Dry run - previewing ${provider.name} checkout flow...\n`);
       }
-      
+
       const order = await provider.checkout(options.dryRun || false);
       
       if (options.dryRun) {
         console.log(`\n📋 Checkout Preview:`);
         console.log(`Total: £${order.total}`);
         console.log(`Status: ${order.status}`);
-        console.log('\n💡 Use without --dry-run to place order');
+        console.log('\n💡 If the user approves this, place the order with: checkout --yes');
       } else {
         console.log(`✅ Order placed with ${provider.name}!`);
         console.log(JSON.stringify(order, null, 2));

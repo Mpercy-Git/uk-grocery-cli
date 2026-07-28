@@ -1,45 +1,55 @@
 ---
 name: uk-grocery-cli
-description: "Multi-supermarket UK grocery automation. Search, basket, delivery, and checkout across Sainsbury's, Ocado, and Tesco. Available as CLI, MCP server, or agent skill."
+description: "Multi-supermarket UK grocery automation. Use when the user wants to plan a shop, compare grocery prices across Sainsbury's, Ocado, and Tesco, manage a basket, book a delivery slot, or place an order. Available as a CLI, an MCP server, or agent skills."
 license: MIT
-compatibility: Node.js 18+, TypeScript, Playwright for auth. UK supermarket delivery areas.
+allowed-tools: Bash(npm run groc:*), Bash(npm install:*), Bash(npx playwright install:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
+  requires: "Node.js 18+, Playwright for login. UK supermarket delivery areas."
   tags: [groceries, sainsburys, ocado, tesco, uk, shopping, automation, mcp, agent-tool]
-allowed-tools: Bash({baseDir}/node:*), Bash(npm:run:groc:*)
 ---
 
-# UK Grocery CLI - Agent Skills
+# UK Grocery CLI
 
-Unified grocery automation across UK supermarkets. Use via CLI, MCP server, or as agent skills.
+Unified grocery automation across UK supermarkets, usable from the CLI, an MCP
+server, or as agent skills.
 
-**Location:** `{baseDir}`
+Run every command below from the repository root — the directory containing `package.json`.
 
----
+Keep the `--` after `npm run groc`: without it npm swallows any `--flag`, so
+`npm run groc search "milk" --json` silently runs without `--json`. If you have
+linked the CLI globally, `groc ...` takes the flags directly.
 
-## Per-Supermarket Skills
+## When to use
 
-Each supermarket has a dedicated skill file with provider-specific commands, authentication, and API details:
+- The user wants to plan meals or order groceries
+- The user asks about product prices or availability
+- The user wants to compare prices across supermarkets
+- The user needs to manage a shopping basket
+- The user wants to book a delivery slot or place an order
+- The user asks about a weekly shop, meal prep, or grocery budget
 
-| Supermarket | Skill File | Status |
-|-------------|-----------|--------|
-| **Sainsbury's** | [`skills/sainsburys.md`](skills/sainsburys.md) | Full coverage |
-| **Tesco** | [`skills/tesco.md`](skills/tesco.md) | Full coverage + staples |
-| **Ocado** | [`skills/ocado.md`](skills/ocado.md) | Full coverage except slot booking/checkout (AWS WAF) |
+## Per-supermarket skills
 
----
+Each supermarket has its own skill with provider-specific commands, authentication, and API details:
 
-## Quick Start
+| Supermarket | Skill | Coverage |
+|-------------|-------|----------|
+| **Sainsbury's** | [`skills/sainsburys-groceries`](skills/sainsburys-groceries/SKILL.md) | Full |
+| **Tesco** | [`skills/tesco-groceries`](skills/tesco-groceries/SKILL.md) | Full, plus repeat-purchase staples |
+| **Ocado** | [`skills/ocado-groceries`](skills/ocado-groceries/SKILL.md) | Full except slot booking and checkout (AWS WAF) |
+| Sainsbury's (fast path) | [`skills/grocery-api`](skills/grocery-api/SKILL.md) | Search and basket over the local HTTP API |
+
+## Setup
 
 ```bash
-cd {baseDir}
 npm install
 npx playwright install chromium
 ```
 
-### CLI Usage
+## CLI usage
 
 ```bash
 # Search any supermarket
@@ -48,25 +58,27 @@ npm run groc -- --provider tesco search "milk"
 npm run groc -- --provider ocado search "milk"
 
 # Compare across all stores
-npm run groc compare "organic eggs" --json
+npm run groc -- compare "organic eggs" --json
 
-# Provider is a flag - all commands work the same way
+# Provider is a flag — every command works the same way
 npm run groc -- --provider <store> basket
 npm run groc -- --provider <store> add <id> --qty 2
 npm run groc -- --provider <store> slots
 npm run groc -- --provider <store> checkout --dry-run
 ```
 
-### MCP Server Usage
+## MCP server usage
 
 ```bash
-# Start MCP server (stdio transport)
+# stdio transport
 npx tsx src/mcp-server.ts
-# Or after build:
+
+# or after a build
 node dist/mcp-server.js
 ```
 
 Claude Desktop config (`claude_desktop_config.json`):
+
 ```json
 {
   "mcpServers": {
@@ -78,17 +90,41 @@ Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
----
+## Placing an order
 
-## MCP Tools Reference
+Everything up to the order — searching, comparing, building the basket, booking a
+slot — is safe to do autonomously. Placing the order is not: it spends the user's
+money, so it always takes an explicit human approval.
 
-All tools accept a `provider` parameter (`sainsburys`, `ocado`, `tesco`). Default: `sainsburys`.
+**Over MCP,** `grocery_checkout` is a two-step tool:
 
-### Core Tools (all providers)
+1. Call it with `dry_run: true` (the default). It returns the line items, total,
+   and booked slot, plus a single-use `confirmation_code`.
+2. Show that preview to the user and ask them to approve it.
+3. Only once they have, call it again with `dry_run: false` and the
+   `confirmation_code`.
+
+The code expires after 10 minutes, works only for the provider that issued it, and
+is void if the basket changes in between — any of those means going back to step 1.
+
+**From the CLI,** `checkout` refuses to run without a decision:
+
+```bash
+npm run groc -- --provider <store> checkout --dry-run   # Preview, show the user
+npm run groc -- --provider <store> checkout --yes       # Place it, once they approve
+```
+
+Never pass `dry_run: false` or `--yes` on your own initiative.
+
+## MCP tools
+
+Every tool takes a `provider` parameter (`sainsburys`, `ocado`, `tesco`), defaulting to `sainsburys`.
+
+### Core tools
 
 | Tool | Description |
 |------|-------------|
-| `grocery_login` | Login to supermarket account |
+| `grocery_login` | Login to a supermarket account |
 | `grocery_status` | Check login status across all providers |
 | `grocery_search` | Search products |
 | `grocery_compare` | Compare prices across all stores |
@@ -98,8 +134,8 @@ All tools accept a `provider` parameter (`sainsburys`, `ocado`, `tesco`). Defaul
 | `grocery_basket_update` | Update item quantity |
 | `grocery_basket_clear` | Clear basket |
 | `grocery_slots` | List delivery slots |
-| `grocery_book_slot` | Book delivery slot |
-| `grocery_checkout` | Checkout (dry_run=true by default) |
+| `grocery_book_slot` | Book a delivery slot |
+| `grocery_checkout` | Preview, then place the order — requires user approval |
 | `grocery_orders` | View order history |
 | `grocery_favourites` | Favourite / frequently-bought products (Sainsbury's, Ocado) |
 | `grocery_favourites_search` | Search within favourites (Sainsbury's, Ocado) |
@@ -107,61 +143,51 @@ All tools accept a `provider` parameter (`sainsburys`, `ocado`, `tesco`). Defaul
 | `grocery_browse` | Browse products in a category (Ocado) |
 | `grocery_providers` | List providers and login status |
 
-### Provider-Specific Tools
+### Provider-specific tools
 
 | Tool | Description |
 |------|-------------|
-| `tesco_staples` | View, update, or auto-add repeat-purchase staples |
+| `tesco_staples` | View, refresh, or auto-add repeat-purchase staples |
 | `ocado_regulars` | List Ocado recurring-shopping ("Regulars") definitions |
 
----
+## Example workflows
 
-## When to Use This Skill
+### Meal planning
 
-Trigger when users:
-- Want to plan meals or order groceries
-- Ask about product prices or availability
-- Want to compare prices across supermarkets
-- Need to manage a shopping basket
-- Want to book delivery slots or checkout
-- Ask about weekly shop, meal prep, or grocery budget
-
----
-
-## Example Agent Workflows
-
-### Meal Planning
 ```bash
-# Search ingredients across stores
-npm run groc compare "chicken breast" --json
-npm run groc compare "basmati rice" --json
+# Compare ingredients across stores
+npm run groc -- compare "chicken breast" --json
+npm run groc -- compare "basmati rice" --json
 
-# Add to cheapest provider
+# Build the basket at the cheapest provider
 npm run groc -- --provider tesco add PRODUCT_ID --qty 1
 npm run groc -- --provider tesco basket --json
+
+# Preview, show the user, place only once they approve
 npm run groc -- --provider tesco checkout --dry-run
+npm run groc -- --provider tesco checkout --yes
 ```
 
-### Restock Staples (Tesco)
+### Restock staples (Tesco)
+
 ```bash
 npm run groc -- --provider tesco staples --add
 npm run groc -- --provider tesco basket --json
 npm run groc -- --provider tesco checkout --dry-run
 ```
 
-### Price Comparison
-```bash
-npm run groc compare "organic milk" --json
-# Returns results from all providers with prices
-```
+### Price comparison
 
----
+```bash
+npm run groc -- compare "organic milk" --json   # Results from every provider
+```
 
 ## Documentation
 
-- [`skills/sainsburys.md`](skills/sainsburys.md) - Sainsbury's skill details
-- [`skills/tesco.md`](skills/tesco.md) - Tesco skill details
-- [`skills/ocado.md`](skills/ocado.md) - Ocado skill details
-- [`AGENTS.md`](AGENTS.md) - Full agent integration guide
-- [`docs/SMART-SHOPPING.md`](docs/SMART-SHOPPING.md) - Smart shopping decisions
-- [`API-REFERENCE.md`](API-REFERENCE.md) - API endpoint documentation
+- [`skills/sainsburys-groceries/SKILL.md`](skills/sainsburys-groceries/SKILL.md) — Sainsbury's skill
+- [`skills/tesco-groceries/SKILL.md`](skills/tesco-groceries/SKILL.md) — Tesco skill
+- [`skills/ocado-groceries/SKILL.md`](skills/ocado-groceries/SKILL.md) — Ocado skill
+- [`skills/grocery-api/SKILL.md`](skills/grocery-api/SKILL.md) — local HTTP API skill
+- [`AGENTS.md`](AGENTS.md) — full agent integration guide
+- [`docs/SMART-SHOPPING.md`](docs/SMART-SHOPPING.md) — smart shopping decisions
+- [`API-REFERENCE.md`](API-REFERENCE.md) — API endpoint documentation
