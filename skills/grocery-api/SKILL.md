@@ -2,13 +2,13 @@
 name: grocery-api
 description: "Fast Sainsbury's grocery access over the local groc HTTP API. Use when the user asks to search Sainsbury's products or favourites, or to view, add to, update, or remove items from their basket, and the local API server is running."
 license: MIT
-allowed-tools: Bash(node skills/grocery-api/wrapper.js:*), Bash(npm run api:*)
+compatibility: "Node.js 18+, TypeScript. Needs the local groc API running on port 7876."
+allowed-tools: Bash(node:*), Bash(npm:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
-  requires: "Node.js 18+, the local groc API running on port 7876."
-  tags: [groceries, sainsburys, uk, shopping, automation, http-api, agent-tool]
+  tags: "groceries, sainsburys, uk, shopping, automation, http-api, agent-tool"
 ---
 
 # Grocery API

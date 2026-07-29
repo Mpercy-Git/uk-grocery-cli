@@ -2,13 +2,13 @@
 name: ocado-groceries
 description: "Ocado UK grocery automation. Use when the user wants to shop at Ocado, check Ocado prices or stock, manage their Ocado trolley, browse categories or favourites, or check Ocado delivery slots."
 license: MIT
-allowed-tools: Bash(npm run groc:*), Bash(npm install:*)
+compatibility: "Node.js 18+, TypeScript. London & South England delivery areas only."
+allowed-tools: Bash(npm:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
-  requires: "Node.js 18+. London & South England delivery areas only."
-  tags: [groceries, ocado, uk, shopping, automation, mcp, agent-tool]
+  tags: "groceries, ocado, uk, shopping, automation, mcp, agent-tool"
 ---
 
 # Ocado Groceries
@@ -118,6 +118,9 @@ npm run groc -- --provider ocado checkout   # Not implemented (AWS WAF) — erro
 Ocado orders cannot be placed from here. Build the trolley, show the user the
 slots, and hand off: they book the slot and check out on ocado.com against the
 same trolley. Do not present the order as placed.
+
+Running inside Frona, the hand-off is the whole story for Ocado — there is no
+order to approve. See [`docs/FRONA.md`](../../docs/FRONA.md).
 
 ## MCP tools
 

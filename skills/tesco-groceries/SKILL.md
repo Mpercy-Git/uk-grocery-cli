@@ -2,13 +2,13 @@
 name: tesco-groceries
 description: "Tesco UK grocery automation. Use when the user wants to shop at Tesco, check Tesco prices or stock, manage their Tesco basket, reorder repeat-purchase staples, book a delivery slot, or place an order."
 license: MIT
-allowed-tools: Bash(npm run groc:*), Bash(npm install:*), Bash(npx playwright install:*)
+compatibility: "Node.js 18+, TypeScript, Playwright for login, slots, and checkout. UK Tesco delivery areas only."
+allowed-tools: Bash(npm:*), Bash(npx:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
-  requires: "Node.js 18+, Playwright for login, slots, and checkout. UK Tesco delivery areas only."
-  tags: [groceries, tesco, uk, shopping, automation, mcp, agent-tool]
+  tags: "groceries, tesco, uk, shopping, automation, mcp, agent-tool"
 ---
 
 # Tesco Groceries
@@ -131,6 +131,19 @@ approval.
 Plain `checkout` refuses to run and prints these steps. Over MCP the same gate is
 enforced by `grocery_checkout` (see below). Tesco also never auto-completes
 payment — the payment step itself is confirmed by the user.
+
+**Running inside Frona:** collect the approval with the `ask_user_question` tool
+(provider `human_in_the_loop`), which blocks until the user answers:
+
+```json
+{
+  "question": "Place this Tesco order? 12 items, £48.20, delivered Thu 09:00-10:00.",
+  "options": ["Place the order", "Cancel"]
+}
+```
+
+Only run the confirming step if the answer is the approving option. See
+[`docs/FRONA.md`](../../docs/FRONA.md).
 
 ## MCP tools
 

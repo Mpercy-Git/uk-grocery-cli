@@ -2,13 +2,13 @@
 name: sainsburys-groceries
 description: "Sainsbury's UK grocery automation. Use when the user wants to shop at Sainsbury's, check Sainsbury's prices or stock, manage their Sainsbury's basket, book a delivery slot, or place an order."
 license: MIT
-allowed-tools: Bash(npm run groc:*), Bash(npm install:*), Bash(npx playwright install:*)
+compatibility: "Node.js 18+, TypeScript, Playwright for login. UK Sainsbury's delivery areas only."
+allowed-tools: Bash(npm:*), Bash(npx:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
-  requires: "Node.js 18+, Playwright for login. UK Sainsbury's delivery areas only."
-  tags: [groceries, sainsburys, uk, shopping, automation, mcp, agent-tool]
+  tags: "groceries, sainsburys, uk, shopping, automation, mcp, agent-tool"
 ---
 
 # Sainsbury's Groceries
@@ -95,6 +95,19 @@ order cannot — it spends the user's money and needs their explicit approval.
 
 Plain `npm run groc -- checkout` refuses to run and prints these steps. Over MCP the
 same gate is enforced by `grocery_checkout` (see below).
+
+**Running inside Frona:** collect the approval with the `ask_user_question` tool
+(provider `human_in_the_loop`), which blocks until the user answers:
+
+```json
+{
+  "question": "Place this Sainsbury's order? 12 items, £48.20, delivered Thu 09:00-10:00.",
+  "options": ["Place the order", "Cancel"]
+}
+```
+
+Only run the confirming step if the answer is the approving option. See
+[`docs/FRONA.md`](../../docs/FRONA.md).
 
 ## MCP tools
 

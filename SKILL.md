@@ -2,13 +2,13 @@
 name: uk-grocery-cli
 description: "Multi-supermarket UK grocery automation. Use when the user wants to plan a shop, compare grocery prices across Sainsbury's, Ocado, and Tesco, manage a basket, book a delivery slot, or place an order. Available as a CLI, an MCP server, or agent skills."
 license: MIT
-allowed-tools: Bash(npm run groc:*), Bash(npm install:*), Bash(npx playwright install:*)
+compatibility: "Node.js 18+, TypeScript, Playwright for login. UK supermarket delivery areas."
+allowed-tools: Bash(npm:*), Bash(npx:*)
 metadata:
   author: zish
   version: "2.1.0"
   repository: https://github.com/abracadabra50/uk-grocery-cli
-  requires: "Node.js 18+, Playwright for login. UK supermarket delivery areas."
-  tags: [groceries, sainsburys, ocado, tesco, uk, shopping, automation, mcp, agent-tool]
+  tags: "groceries, sainsburys, ocado, tesco, uk, shopping, automation, mcp, agent-tool"
 ---
 
 # UK Grocery CLI
@@ -116,6 +116,19 @@ npm run groc -- --provider <store> checkout --yes       # Place it, once they ap
 
 Never pass `dry_run: false` or `--yes` on your own initiative.
 
+**Running inside Frona,** collect that approval with the `ask_user_question` tool
+(provider `human_in_the_loop`), which blocks until the user answers:
+
+```json
+{
+  "question": "Place this Tesco order? 12 items, £48.20, delivered Thu 09:00-10:00.",
+  "options": ["Place the order", "Cancel"]
+}
+```
+
+Only run the confirming step if the answer is the approving option.
+Setup and caveats: [`docs/FRONA.md`](docs/FRONA.md).
+
 ## MCP tools
 
 Every tool takes a `provider` parameter (`sainsburys`, `ocado`, `tesco`), defaulting to `sainsburys`.
@@ -189,5 +202,6 @@ npm run groc -- compare "organic milk" --json   # Results from every provider
 - [`skills/ocado-groceries/SKILL.md`](skills/ocado-groceries/SKILL.md) — Ocado skill
 - [`skills/grocery-api/SKILL.md`](skills/grocery-api/SKILL.md) — local HTTP API skill
 - [`AGENTS.md`](AGENTS.md) — full agent integration guide
+- [`docs/FRONA.md`](docs/FRONA.md) — installing on Frona (skills, MCP, order approval)
 - [`docs/SMART-SHOPPING.md`](docs/SMART-SHOPPING.md) — smart shopping decisions
 - [`API-REFERENCE.md`](API-REFERENCE.md) — API endpoint documentation

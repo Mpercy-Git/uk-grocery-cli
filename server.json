@@ -1,0 +1,60 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.mpercy-git/uk-grocery-cli",
+  "title": "UK Grocery",
+  "description": "Search products, compare prices, manage baskets, book delivery slots, and place orders at Sainsbury's, Ocado, and Tesco. Placing an order requires explicit human approval.",
+  "version": "2.1.0",
+  "repository": {
+    "url": "https://github.com/Mpercy-Git/uk-grocery-cli",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registry_type": "npm",
+      "identifier": "uk-grocery-cli",
+      "version": "2.1.0",
+      "runtime_hint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environment_variables": [
+        {
+          "name": "SAINSBURYS_EMAIL",
+          "description": "Sainsbury's account email. Set together with SAINSBURYS_PASSWORD to let the server re-authenticate headlessly when the session expires.",
+          "is_required": false,
+          "is_secret": true
+        },
+        {
+          "name": "SAINSBURYS_PASSWORD",
+          "description": "Sainsbury's account password, used for headless re-authentication on 401/403.",
+          "is_required": false,
+          "is_secret": true
+        },
+        {
+          "name": "TESCO_PASSWORD",
+          "description": "Tesco account password, used by grocery_login when the password is not passed in the call.",
+          "is_required": false,
+          "is_secret": true
+        },
+        {
+          "name": "GROC_EMAIL",
+          "description": "Default account email for logins that do not specify one.",
+          "is_required": false,
+          "is_secret": true
+        },
+        {
+          "name": "GROC_PASSWORD",
+          "description": "Default account password for logins that do not specify one.",
+          "is_required": false,
+          "is_secret": true
+        },
+        {
+          "name": "SAINSBURYS_STORE_NUMBER",
+          "description": "Overrides the Sainsbury's store used for availability and slots.",
+          "is_required": false,
+          "is_secret": false
+        }
+      ]
+    }
+  ]
+}

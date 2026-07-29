@@ -7,10 +7,12 @@
   "bin": {
     "groc": "./dist/cli.js",
     "groc-mcp": "./dist/mcp-server.js",
-    "groc-api": "./dist/http-server.js"
+    "groc-api": "./dist/http-server.js",
+    "uk-grocery-cli": "./dist/mcp-server.js"
   },
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "dev": "tsx src/cli.ts",
     "groc": "tsx src/cli.ts",
     "api": "tsx src/http-server.ts",

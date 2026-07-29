@@ -167,7 +167,7 @@ await exec('groc --provider sainsburys checkout --dry-run'); // then get the use
 **The CLI handles:** Product search, basket operations, checkout  
 **Your agent handles:** Meal planning, organic decisions, budget optimization
 
-See [`AGENTS.md`](./AGENTS.md) for complete integration guide.
+See [`AGENTS.md`](./AGENTS.md) for complete integration guide, or [`docs/FRONA.md`](./docs/FRONA.md) to install it on Frona.
 
 ### MCP Server (Claude Desktop / MCP Clients)
 
@@ -605,7 +605,9 @@ uk-grocery-cli/
 │   └── tesco-capture-search.ts   # Dev tool: capture Tesco search API responses
 ├── docs/
 │   ├── SMART-SHOPPING.md         # Agent intelligence guide
+│   ├── FRONA.md                  # Installing on Frona (skills, MCP, approval)
 │   └── API-REFERENCE.md          # Complete API documentation
+├── server.json                   # MCP registry manifest
 ├── SKILL.md                      # Agent skills format
 ├── AGENTS.md                     # Agent integration guide
 └── README.md                     # This file
