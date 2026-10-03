@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "prepublishOnly": "npm run build",
+    "prepare": "npm run build",
     "dev": "tsx src/cli.ts",
     "groc": "tsx src/cli.ts",
     "api": "tsx src/http-server.ts",
